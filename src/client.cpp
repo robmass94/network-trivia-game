@@ -23,6 +23,8 @@ void HandleConnect        (const std::vector<std::string>& argv);
 void HandleHelp           ();
 void HandleDisconnect     ();
 void HandleUnknownCommand ();
+void PrintServerMessage   (const std::string& msg);
+void PrintUserMessage     (const std::string& msg);
 
 int main(int argc, char** argv) {
 	std::string input;
@@ -157,14 +159,9 @@ void* ProcessMessages(void* fd) {
 		struct tm* timeinfo = localtime(&current_time);
 
 		// display the message
-		wattron(chatWin, COLOR_PAIR(6));
-		wprintw(chatWin, 
-			"[%02d:%02d:%02d] %s\n", 
-			timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,
-			message.c_str()
-		);
-		wattroff(chatWin, COLOR_PAIR(6));
-		wrefresh(chatWin);
+		wprintw(chatWin, "[%02d:%02d:%02d] ", timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+		if      (message[0] == '0') PrintServerMessage(message.substr(2));
+		else if (message[0] == '1') PrintUserMessage(message.substr(2));
 		wcursyncup(inputWin);
 	}
 
@@ -198,4 +195,24 @@ int HandleUserInput(std::string& input) {
 	wclear(inputWin);
 	wrefresh(inputWin);
 	return i;
+}
+
+void PrintServerMessage(const std::string& msg) {
+	wattron(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, "%s\n", msg.c_str());
+	wattroff(chatWin, COLOR_PAIR(2));
+	wrefresh(chatWin);
+}
+
+void PrintUserMessage(const std::string& msg) {
+	auto tokenized_msg = stringutils::TokenizeString(msg);
+	
+	// print username
+	wattron(chatWin, COLOR_PAIR(7));
+	wprintw(chatWin, "<%s>: ", tokenized_msg[0].c_str());
+	wattroff(chatWin, COLOR_PAIR(7));
+
+	// print message
+	wprintw(chatWin, "%s\n", stringutils::Join(tokenized_msg, 1).c_str());
+	wrefresh(chatWin);	
 }

@@ -61,7 +61,7 @@ void StopGame() {
 
 void BroadcastHint() {
 	if(game_running) {
-		BroadcastMessage(0, game_bot.GetHint(current_question));
+		BroadcastMessage(0, "Here's a hint: " + game_bot.GetHint(current_question));
 	}
 }
 
@@ -129,7 +129,7 @@ void* ProcessGame(void *) {
 		}
 
 		// output answer if timed out
-		if(result == ETIMEDOUT && game_runnning) {
+		if(result == ETIMEDOUT && game_running) {
 			BroadcastMessage(0, "Time's up!");
 			BroadcastMessage(0, "The answer was: " + game_bot.GetAnswer(current_question));
 		}
@@ -270,8 +270,9 @@ void ReceiveMessage(const int& fd, const std::string& msg) {
 }
 
 void BroadcastMessage(const int& fd, const std::string& msg) {
-	std::string formatted_usn = "<TODO>: ";
+	std::string username = "TODO";
 	for(auto itr = active_descriptors.begin(); itr != active_descriptors.end(); ++itr) {
-		SendMessage(itr->first, formatted_usn + msg);
+		if   (fd != 0) SendMessage(itr->first, "1 " + username + " " + msg);
+		else           SendMessage(itr->first, "0 " + msg);
 	}
 }
