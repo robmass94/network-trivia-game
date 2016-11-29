@@ -57,7 +57,7 @@ void DrawInfoLines() {
 
 	// refer to help command
 	wbkgd(infoLine, COLOR_PAIR(3));
-	wprintw(infoLine, " Type /help to view a list of available commads");
+	wprintw(infoLine, " Type /help to view a list of available commands");
 	wrefresh(infoLine);
 
 	// create lower line

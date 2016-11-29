@@ -8,9 +8,10 @@
 #include "gui.cpp"
 
 // globals
-int       server_descriptor = socket(AF_INET, SOCK_STREAM, 0);
+int       server_descriptor;
 WINDOW    *mainWin, *inputWin, *chatWin, *chatWinBox, *inputWinBox, *infoLine, *infoLineBottom;
 pthread_t message_thread;
+bool isConnected;
 
 // thread functions
 void* ProcessMessages (void* fd);
@@ -35,6 +36,7 @@ int main(int argc, char** argv) {
 	// ignore SIGPIPE
 	signal(SIGPIPE, SIG_IGN);
 
+	isConnected = false;
 
 	// main loop
 	while(true) {
@@ -75,7 +77,8 @@ void HandleConnect(const std::vector<std::string>& argv) {
 
 	// attempt connection
 	std::string addr = argv[1];
-	int         port = atoi(argv[2].c_str());
+	int         port = stoi(argv[2]);
+	server_descriptor = socket(AF_INET, SOCK_STREAM, 0); 
 	if(!ConnectToServer(server_descriptor, addr.c_str(), port)) {
 		wattron(chatWin, COLOR_PAIR(4));
 		wprintw(chatWin, "ERROR: failed to connect to '%s' on port '%d'.\n", addr.c_str(), port);
@@ -86,23 +89,48 @@ void HandleConnect(const std::vector<std::string>& argv) {
 		pthread_create(&message_thread, NULL, ProcessMessages, &server_descriptor);
 
 		// print connection details
+		werase(infoLineBottom);
 		wattron(infoLineBottom, COLOR_PAIR(3));
 		wprintw(infoLineBottom, "Connected to '%s' on port '%d'", addr.c_str(), port);
 		wattroff(infoLineBottom, COLOR_PAIR(3));
 		wrefresh(infoLineBottom);
+
+		isConnected = true;
 	}
 }
 
 void HandleHelp() {
+	wattron(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, "/connect [server hostname] [server port]");
+	wattroff(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, " : connect to server with given hostname on given port\n");
 
+	wattron(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, "/disconnect");
+	wattroff(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, " : disconnect from server to which client is currently connected\n");
+
+	wattron(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, "/help");
+	wattroff(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, " : display this list of commands\n");
+	
+	wrefresh(chatWin);
 }
 
 void HandleDisconnect() {
-	shutdown(server_descriptor, SHUT_RDWR);
-	wattron(infoLineBottom, COLOR_PAIR(3));
-	wprintw(infoLineBottom, "Not connected to a server."); // ideally we just clear the line
-	wattroff(infoLineBottom, COLOR_PAIR(3));
-	wrefresh(infoLineBottom);
+	if (isConnected) {
+		shutdown(server_descriptor, SHUT_RDWR);
+		close(server_descriptor);
+		werase(infoLineBottom);
+		isConnected = false;
+	} else {
+		werase(infoLineBottom);
+		wattron(infoLineBottom, COLOR_PAIR(3));
+		wprintw(infoLineBottom, "Not connected to a server."); // ideally we just clear the line
+		wattroff(infoLineBottom, COLOR_PAIR(3));
+		wrefresh(infoLineBottom);
+	}
 }
 
 void HandleUnknownCommand() {
