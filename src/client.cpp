@@ -76,7 +76,7 @@ void HandleConnect(const std::vector<std::string>& argv) {
 	// attempt connection
 	std::string addr = argv[1];
 	int         port = stoi(argv[2]);
-	server_descriptor = server_descriptor = socket(AF_INET, SOCK_STREAM, 0); 
+	server_descriptor = socket(AF_INET, SOCK_STREAM, 0); 
 	if(!ConnectToServer(server_descriptor, addr.c_str(), port)) {
 		wattron(chatWin, COLOR_PAIR(4));
 		wprintw(chatWin, "ERROR: failed to connect to '%s' on port '%d'.\n", addr.c_str(), port);
