@@ -1,6 +1,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include <ncurses.h>
+#include <sstream>
 #include <string> 
 #include "shared.h"
 #include "gui.cpp"
@@ -21,11 +22,6 @@ int main(int argc, char** argv) {
 	// start the gui!
 	InitializeGUI();
 
-	// connect to the server in the parameters
-	if(!ConnectToServer(server_descriptor, argv[1], atoi(argv[2]))) {
-		return 0;
-	}
-
 	// ignore SIGPIPE
 	signal(SIGPIPE, SIG_IGN);
 
@@ -40,7 +36,31 @@ int main(int argc, char** argv) {
 		input.clear();
 		num_read = HandleUserInput(input);
 		if(num_read > 0) {
-			SendMessage(server_descriptor, input.c_str());
+			std::istringstream strm(input);
+			std::string token;
+			strm >> token;
+			if (token == "/connect") {
+				std::string host;
+				std::string s_port;
+				strm >> host;
+				strm >> s_port;
+				if (host.empty() || s_port.empty()) {
+					wattron(chatWin, COLOR_PAIR(4));
+					wprintw(chatWin, "Syntax: /connect [server hostname] [server port]\n");
+					wattroff(chatWin, COLOR_PAIR(4));
+				} else if (!ConnectToServer(server_descriptor, host.c_str(), stoi(s_port))) {
+					wattron(chatWin, COLOR_PAIR(4));
+					wprintw(chatWin, "Failed to connect to %s on port %s\n", host.c_str(), s_port.c_str());
+					wattroff(chatWin, COLOR_PAIR(4));
+				} else {
+					wattron(chatWin, COLOR_PAIR(7));
+					wprintw(chatWin, "You are now connected to %s on port %s\n", host.c_str(), s_port.c_str());
+					wattroff(chatWin, COLOR_PAIR(7));
+				}
+				wrefresh(chatWin);
+			} else {
+				SendMessage(server_descriptor, input.c_str());
+			}
 		}
 	}
 	

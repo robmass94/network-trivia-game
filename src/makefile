@@ -28,5 +28,5 @@ triviabot.o: triviabot.cpp
 
 ####################################################### COMMANDS ######################################################
 clean:
-	rm client server *.o
+	rm -f client server *.o
 
