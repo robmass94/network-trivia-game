@@ -62,7 +62,7 @@ bool ConnectToServer(const int& sd, const char* server, const int& port) {
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 	if((result = getaddrinfo(server, NULL, &hints, &info)) != 0) {
-		printf("getaddrinfo wrong: %s\n", gai_strerror(result));
+		//printf("getaddrinfo wrong: %s\n", gai_strerror(result));
 		return false;
 	}
 
