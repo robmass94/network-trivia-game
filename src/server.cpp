@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include <map>
 #include <signal.h>
+#include <sys/time.h>
 #include "shared.h"
 #include "stringutils.h"
 #include "user.h"
@@ -16,8 +17,10 @@ pthread_t                game_thread;
 TriviaBot                game_bot;
 std::string              current_question;
 bool                     game_running = false;
-
+pthread_cond_t           answered_cond  = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t          answered_mutex = PTHREAD_MUTEX_INITIALIZER;
 // server commands
+//
 void HandleExit ();
 
 // server messages
@@ -95,22 +98,49 @@ int main(int argc, char** argv) {
 }
 
 void* ProcessGame(void *) {
+	struct timespec timeToWait;
+	struct timeval now;
+
+	// loop while the game is running
 	while(game_running) {
 		current_question = game_bot.GetRandomQuestion();
 		
 		// ask a question
 		BroadcastMessage(0, current_question.c_str());
 
-		// thread for timer / correct answer (WIP)
-		sleep(30);
-		BroadcastMessage(0, game_bot.GetAnswer(current_question));
+		// time to wait for an answer for
+		gettimeofday(&now, NULL);
+		timeToWait.tv_sec = now.tv_sec + 15;
 
-		// wait 5s and do it again
+		// wait 15s or until answered
+		pthread_mutex_lock(&answered_mutex);
+		int result = pthread_cond_timedwait(&answered_cond, &answered_mutex, &timeToWait);
+		pthread_mutex_unlock(&answered_mutex);
+
+		// if timed out, provide a hint
+		if(result == ETIMEDOUT && game_running) {
+			BroadcastHint();
+
+			// wait another 15s or until answered
+			timeToWait.tv_sec = timeToWait.tv_sec + 15;
+			pthread_mutex_lock(&answered_mutex);
+			result = pthread_cond_timedwait(&answered_cond, &answered_mutex, &timeToWait);
+			pthread_mutex_unlock(&answered_mutex);
+		}
+
+		// output answer if timed out
+		if(result == ETIMEDOUT && game_runnning) {
+			BroadcastMessage(0, "Time's up!");
+			BroadcastMessage(0, "The answer was: " + game_bot.GetAnswer(current_question));
+		}
+
+		// wait 5s before asking the next question
 		sleep(5);
 	}
 	
 	return NULL;
 }
+
 
 void* ProcessStdin(void *) {
 	std::string command;
@@ -223,10 +253,20 @@ void ReceiveMessage(const int& fd, const std::string& msg) {
 	auto tokenized_msg  = stringutils::TokenizeString(msg);
 	std::string command = tokenized_msg[0];
 
-	// broadcast message to all clients
+	// check for server commands first
 	if      (command == "!start") StartGame();
 	else if (command == "!hint")  BroadcastHint();
 	else if (command == "!stop")  StopGame();
+
+	// otherwise process further
+	else {
+		if(game_running) {
+			if(msg == game_bot.GetAnswer(current_question)) {
+				pthread_cond_signal(&answered_cond);
+				BroadcastMessage(0, "CORRECT - " + std::to_string(fd));
+			}
+		}
+	}
 }
 
 void BroadcastMessage(const int& fd, const std::string& msg) {
