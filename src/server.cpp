@@ -8,9 +8,10 @@
 #include "location.h"
 
 // globals
-int      server_descriptor;
-location self;
+int                      server_descriptor;
+location                 self;
 std::map<int, pthread_t> active_descriptors;
+pthread_t                game_thread;
 
 // server commands
 void HandleExit ();
@@ -26,7 +27,6 @@ void RemoveClient (const int fd);
 void* ProcessStdin       (void *);
 void* ProcessConnections (void *);
 void* ProcessMessages    (void *);
-//void* ProcessGame        (void *); // <--- maybe here, might go into messages we'll see
 
 // other functions
 void BroadcastMessage(const int& fd, const std::string& msg);
@@ -51,6 +51,8 @@ int main(int argc, char** argv) {
 
 	// ignore SIGPIPE
 	signal(SIGPIPE, SIG_IGN);
+
+	// load the trivia questions
 
 	// start the main threads
 	pthread_create(&stdin_thread,  NULL, ProcessStdin,       (void *)NULL);
@@ -90,7 +92,6 @@ void* ProcessConnections(void *) {
 	// accept connections while the server lives
 	while((fd = accept(server_descriptor, NULL, NULL)) != -1) {
 		AddClient(fd);
-		
 		// broadcast that someone connected (maybe here, maybe only if signed in)
 	}
 
@@ -112,7 +113,6 @@ void* ProcessMessages(void* fd) {
 			nread = recv(*(int *)fd, buffer, len, 0);
 			message.append(buffer, nread);
 		}
-
 
 		// collect some information about the message for logging
 		time_t current_time  = time(NULL);
@@ -174,6 +174,9 @@ void HandleExit() {
 }
 
 void ReceiveMessage(const int& fd, const std::string& msg) {
+	auto tokenized_msg  = stringutils::TokenizeString(msg);
+	std::string command = tokenized_msg[0];
+
 	// broadcast message to all clients
 }
 
