@@ -180,8 +180,6 @@ void ReceiveMessage(const int& fd, const std::string& msg) {
 void BroadcastMessage(const int& fd, const std::string& msg) {
 	std::string formatted_usn = "<TODO>: ";
 	for(auto itr = active_descriptors.begin(); itr != active_descriptors.end(); ++itr) {
-		if(itr->first != fd) {
-			SendMessage(itr->first, formatted_usn + msg);
-		}
+		SendMessage(itr->first, formatted_usn + msg);
 	}
 }
