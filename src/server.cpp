@@ -6,12 +6,16 @@
 #include "stringutils.h"
 #include "user.h"
 #include "location.h"
+#include "triviabot.h"
 
 // globals
 int                      server_descriptor;
 location                 self;
 std::map<int, pthread_t> active_descriptors;
 pthread_t                game_thread;
+TriviaBot                game_bot;
+std::string              current_question;
+bool                     game_running = false;
 
 // server commands
 void HandleExit ();
@@ -27,12 +31,35 @@ void RemoveClient (const int fd);
 void* ProcessStdin       (void *);
 void* ProcessConnections (void *);
 void* ProcessMessages    (void *);
+void* ProcessGame        (void *);
 
 // other functions
 void BroadcastMessage(const int& fd, const std::string& msg);
 void ServerInterruptHandler(int) {
 	HandleExit();
 	exit(EXIT_SUCCESS);
+}
+
+// game functions
+void StartGame() {
+	if(!game_running) {
+		BroadcastMessage(0, "Starting the trivia game!");
+		game_running = true;
+		pthread_create(&game_thread, NULL, ProcessGame, (void *)NULL);
+	}
+}
+
+void StopGame() {
+	if(game_running) {
+		game_running = false;
+		BroadcastMessage(0, "Game has ended.");
+	}
+}
+
+void BroadcastHint() {
+	if(game_running) {
+		BroadcastMessage(0, game_bot.GetHint(current_question));
+	}
 }
 
 int main(int argc, char** argv) {
@@ -53,6 +80,7 @@ int main(int argc, char** argv) {
 	signal(SIGPIPE, SIG_IGN);
 
 	// load the trivia questions
+	game_bot.ImportQuestions("questions/questions_00");
 
 	// start the main threads
 	pthread_create(&stdin_thread,  NULL, ProcessStdin,       (void *)NULL);
@@ -64,6 +92,24 @@ int main(int argc, char** argv) {
 	// cleanup before exiting
 	HandleExit();
 	return 0;
+}
+
+void* ProcessGame(void *) {
+	while(game_running) {
+		current_question = game_bot.GetRandomQuestion();
+		
+		// ask a question
+		BroadcastMessage(0, current_question.c_str());
+
+		// thread for timer / correct answer (WIP)
+		sleep(30);
+		BroadcastMessage(0, game_bot.GetAnswer(current_question));
+
+		// wait 5s and do it again
+		sleep(5);
+	}
+	
+	return NULL;
 }
 
 void* ProcessStdin(void *) {
@@ -178,6 +224,9 @@ void ReceiveMessage(const int& fd, const std::string& msg) {
 	std::string command = tokenized_msg[0];
 
 	// broadcast message to all clients
+	if      (command == "!start") StartGame();
+	else if (command == "!hint")  BroadcastHint();
+	else if (command == "!stop")  StopGame();
 }
 
 void BroadcastMessage(const int& fd, const std::string& msg) {

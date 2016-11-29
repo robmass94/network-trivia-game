@@ -3,21 +3,29 @@
 #include <ncurses.h>
 #include <sstream>
 #include <string> 
+#include "stringutils.h"
 #include "shared.h"
 #include "gui.cpp"
 
 // globals
-int    server_descriptor = socket(AF_INET, SOCK_STREAM, 0);
-WINDOW *mainWin, *inputWin, *chatWin, *chatWinBox, *inputWinBox, *infoLine, *infoLineBottom;
+int       server_descriptor = socket(AF_INET, SOCK_STREAM, 0);
+WINDOW    *mainWin, *inputWin, *chatWin, *chatWinBox, *inputWinBox, *infoLine, *infoLineBottom;
+pthread_t message_thread;
 
 // thread functions
 void* ProcessMessages (void* fd);
 int   HandleUserInput (std::string& input);
 
+// helper stuffs
+void ProcessUserCommand   (const std::string&              input);
+void HandleConnect        (const std::vector<std::string>& argv);
+void HandleHelp           ();
+void HandleDisconnect     ();
+void HandleUnknownCommand ();
+
 int main(int argc, char** argv) {
 	std::string input;
 	int num_read;
-	pthread_t message_thread;
 
 	// start the gui!
 	InitializeGUI();
@@ -25,8 +33,6 @@ int main(int argc, char** argv) {
 	// ignore SIGPIPE
 	signal(SIGPIPE, SIG_IGN);
 
-	// start the server thread
-	pthread_create(&message_thread, NULL, ProcessMessages, &server_descriptor);
 
 	// main loop
 	while(true) {
@@ -35,36 +41,73 @@ int main(int argc, char** argv) {
 		// get user input
 		input.clear();
 		num_read = HandleUserInput(input);
+		
 		if(num_read > 0) {
-			std::istringstream strm(input);
-			std::string token;
-			strm >> token;
-			if (token == "/connect") {
-				std::string host;
-				std::string s_port;
-				strm >> host;
-				strm >> s_port;
-				if (host.empty() || s_port.empty()) {
-					wattron(chatWin, COLOR_PAIR(4));
-					wprintw(chatWin, "Syntax: /connect [server hostname] [server port]\n");
-					wattroff(chatWin, COLOR_PAIR(4));
-				} else if (!ConnectToServer(server_descriptor, host.c_str(), stoi(s_port))) {
-					wattron(chatWin, COLOR_PAIR(4));
-					wprintw(chatWin, "Failed to connect to %s on port %s\n", host.c_str(), s_port.c_str());
-					wattroff(chatWin, COLOR_PAIR(4));
-				} else {
-					wattron(chatWin, COLOR_PAIR(7));
-					wprintw(chatWin, "You are now connected to %s on port %s\n", host.c_str(), s_port.c_str());
-					wattroff(chatWin, COLOR_PAIR(7));
-				}
-				wrefresh(chatWin);
-			} else {
-				SendMessage(server_descriptor, input.c_str());
-			}
+			if(input[0] == '/') ProcessUserCommand(input);
+			else                SendMessage(server_descriptor, input.c_str());
 		}
 	}
 	
 	return 0;
+}
+
+void ProcessUserCommand(const std::string& input) {
+	auto tokenized_cmd  = stringutils::TokenizeString(input);
+	std::string command = tokenized_cmd[0];
+
+	if      (command == "/connect")    HandleConnect(tokenized_cmd);
+	else if (command == "/help")       HandleHelp();
+	else if (command == "/disconnect") HandleDisconnect();
+	else                               HandleUnknownCommand();
+}
+
+void HandleConnect(const std::vector<std::string>& argv) {
+	// ensure proper input
+	if(argv.size() != 3) {
+		wattron(chatWin, COLOR_PAIR(4));
+		wprintw(chatWin, "ERROR: syntax: /connect [server hostname] [server port]\n");
+		wattroff(chatWin, COLOR_PAIR(4));
+		wrefresh(chatWin);
+		return;
+	}
+
+	// attempt connection
+	std::string addr = argv[1];
+	int         port = atoi(argv[2].c_str());
+	if(!ConnectToServer(server_descriptor, addr.c_str(), port)) {
+		wattron(chatWin, COLOR_PAIR(4));
+		wprintw(chatWin, "ERROR: failed to connect to '%s' on port '%d'.\n", addr.c_str(), port);
+		wattroff(chatWin, COLOR_PAIR(4));
+		wrefresh(chatWin);
+	} else {
+		// start monitoring messages on this socket
+		pthread_create(&message_thread, NULL, ProcessMessages, &server_descriptor);
+
+		// print connection details
+		wattron(infoLineBottom, COLOR_PAIR(3));
+		wprintw(infoLineBottom, "Connected to '%s' on port '%d'", addr.c_str(), port);
+		wattroff(infoLineBottom, COLOR_PAIR(3));
+		wrefresh(infoLineBottom);
+	}
+}
+
+void HandleHelp() {
+
+}
+
+void HandleDisconnect() {
+	shutdown(server_descriptor, SHUT_RDWR);
+	wattron(infoLineBottom, COLOR_PAIR(3));
+	wprintw(infoLineBottom, "Not connected to a server."); // ideally we just clear the line
+	wattroff(infoLineBottom, COLOR_PAIR(3));
+	wrefresh(infoLineBottom);
+}
+
+void HandleUnknownCommand() {
+	wattron(chatWin, COLOR_PAIR(4));
+	wprintw(chatWin, "ERROR: unknown command.\n");
+	wattroff(chatWin, COLOR_PAIR(4));
+	wrefresh(chatWin);	
 }
 
 void* ProcessMessages(void* fd) {
@@ -96,6 +139,8 @@ void* ProcessMessages(void* fd) {
 		wrefresh(chatWin);
 		wcursyncup(inputWin);
 	}
+
+	HandleDisconnect();
 
 	return NULL;
 }
