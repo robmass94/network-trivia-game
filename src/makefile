@@ -3,8 +3,8 @@ CC=clang++ -std=c++11
 all: server client
 
 ##################################################### CHAT SERVER #####################################################
-server: server.o shared.o stringutils.o
-	$(CC) -pthread -o server server.o shared.o stringutils.o
+server: server.o shared.o stringutils.o triviabot.o
+	$(CC) -pthread -o server server.o shared.o stringutils.o triviabot.o
 
 server.o:
 	$(CC) -c server.cpp
@@ -22,6 +22,9 @@ stringutils.o: stringutils.cpp
 
 shared.o: shared.cpp
 	$(CC) -c shared.cpp
+
+triviabot.o: triviabot.cpp
+	$(CC) -c triviabot.cpp
 
 ####################################################### COMMANDS ######################################################
 clean:
