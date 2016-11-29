@@ -11,7 +11,7 @@ server.o:
 
 ##################################################### CHAT CLIENT #####################################################
 client: client.o shared.o stringutils.o
-	$(CC) -pthread -o client client.o shared.o stringutils.o
+	$(CC) -lncurses -pthread -o client client.o shared.o stringutils.o
 
 client.o:
 	$(CC) -c client.cpp
