@@ -66,6 +66,15 @@ void ProcessUserCommand(const std::string& input) {
 }
 
 void HandleConnect(const std::vector<std::string>& argv) {
+	// check for existing connection
+	if (isConnected) {
+		wattron(chatWin, COLOR_PAIR(4));
+		wprintw(chatWin, "ERROR: You are already connected to a server. Please first disconnect.\n");
+		wattroff(chatWin, COLOR_PAIR(4));
+		wrefresh(chatWin);
+		return;
+	}
+
 	// ensure proper input
 	if(argv.size() != 3) {
 		wattron(chatWin, COLOR_PAIR(4));
@@ -114,6 +123,21 @@ void HandleHelp() {
 	wprintw(chatWin, "/help");
 	wattroff(chatWin, COLOR_PAIR(2));
 	wprintw(chatWin, " : display this list of commands\n");
+
+	wattron(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, "!start");
+	wattroff(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, " : instruct the server to start the trivia game if not already started\n");
+
+	wattron(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, "!hint");
+	wattroff(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, " : instruct the server to broadcast a hint for the current trivia question\n");
+
+	wattron(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, "!stop");
+	wattroff(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, " : instruct the server to stop the trivia game, if running\n");
 	
 	wrefresh(chatWin);
 }
