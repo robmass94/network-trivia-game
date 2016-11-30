@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <iostream>
 #include <pthread.h>
 #include <map>
@@ -262,11 +261,9 @@ void ReceiveMessage(const int& fd, const std::string& msg) {
 	// otherwise process further
 	else {
 		if(game_running) {
-			std::string lower_msg = msg;
-			std::string answer = game_bot.GetAnswer(current_question);
-			std::transform(lower_msg.begin(), lower_msg.end(), lower_msg.begin(), ::tolower);
-			std::transform(answer.begin(), answer.end(), answer.begin(), ::tolower);
-			if(lower_msg == answer) {
+			std::string lower_msg = stringutils::Lower(msg);
+			std::string answer = stringutils::Lower(game_bot.GetAnswer(current_question));
+			if (lower_msg == answer) {
 				pthread_cond_signal(&answered_cond);
 				BroadcastMessage(0, "CORRECT - " + std::to_string(fd));
 			}

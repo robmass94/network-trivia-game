@@ -45,4 +45,21 @@ std::string Join(const std::vector<std::string>& strs, const int& start, const c
 	return joined_str;
 }
 
+// ********************************************************************************************************************
+// Lower
+//
+// Parameters:
+//		str 		- the string to transform to lowercase
+//
+// Returns:
+// 	the lowercase representation of str
+// ********************************************************************************************************************
+
+std::string Lower(const std::string& str)
+{
+	std::string lowercase = str;
+	std::transform(lowercase.begin(), lowercase.end(), lowercase.begin(), ::tolower);
+	return lowercase;
+}
+
 }
