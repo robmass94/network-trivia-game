@@ -38,6 +38,7 @@ void* ProcessGame        (void *);
 
 // other functions
 void BroadcastMessage(const int& fd, const std::string& msg);
+void SendScore(const int &);
 void ServerInterruptHandler(int) {
 	HandleExit();
 	exit(EXIT_SUCCESS);
@@ -249,6 +250,13 @@ void HandleExit() {
 	shutdown(server_descriptor, SHUT_RDWR);
 }
 
+void SendScore(const int &fd)
+{
+	std::string msg = game_bot.SendScore(fd);
+	BroadcastMessage(fd, msg);
+	
+}
+
 void ReceiveMessage(const int& fd, const std::string& msg) {
 	auto tokenized_msg  = stringutils::TokenizeString(msg);
 	std::string command = tokenized_msg[0];
@@ -257,7 +265,7 @@ void ReceiveMessage(const int& fd, const std::string& msg) {
 	if      (command == "!start") StartGame();
 	else if (command == "!hint")  BroadcastHint();
 	else if (command == "!stop")  StopGame();
-
+	else if (command == "!score") SendScore(fd);
 	// otherwise process further
 	else {
 		if(game_running) {
@@ -265,6 +273,7 @@ void ReceiveMessage(const int& fd, const std::string& msg) {
 			std::string answer = stringutils::Lower(game_bot.GetAnswer(current_question));
 			if (lower_msg == answer) {
 				pthread_cond_signal(&answered_cond);
+				game_bot.IncreaseScore(fd);
 				BroadcastMessage(0, "CORRECT - " + std::to_string(fd));
 			}
 		}

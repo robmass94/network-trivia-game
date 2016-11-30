@@ -64,3 +64,12 @@ void TriviaBot::IncreaseScore(const int& sd) {
 	auto itr = player_scores_.find(sd);
 	++itr->second;
 }
+
+std::string TriviaBot::SendScore(const int& sd)
+{
+	std::ostringstream oss;
+	auto itr= player_scores_.find(sd);
+	oss << "Player Score : " << itr->second << "\n";
+	return oss.str();
+
+}

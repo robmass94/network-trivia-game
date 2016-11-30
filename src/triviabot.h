@@ -5,6 +5,7 @@
 #include <fstream>
 #include <string>
 #include "stringutils.h"
+#include <sstream>
 
 class TriviaBot {
 public:
@@ -22,7 +23,7 @@ public:
 	std::string GetAnswer         (const std::string& question) const;
 	std::string GetHint           (const std::string& question) const;
 	void        IncreaseScore     (const int& sd);
-
+	std::string SendScore	      (const int& sd);
 private:
 	std::map<int, int>                 player_scores_;
 	std::map<std::string, std::string> questions_;
