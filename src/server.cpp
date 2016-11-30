@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <pthread.h>
 #include <map>
@@ -261,7 +262,9 @@ void ReceiveMessage(const int& fd, const std::string& msg) {
 	// otherwise process further
 	else {
 		if(game_running) {
-			if(msg == game_bot.GetAnswer(current_question)) {
+			std::string lower_msg = msg;
+			std::transform(lower_msg.begin(), lower_msg.end(), lower_msg.begin(), ::tolower);
+			if(lower_msg == game_bot.GetAnswer(current_question)) {
 				pthread_cond_signal(&answered_cond);
 				BroadcastMessage(0, "CORRECT - " + std::to_string(fd));
 			}
