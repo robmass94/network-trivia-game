@@ -225,6 +225,9 @@ void AddClient(const int fd) {
 	auto itr = active_descriptors.insert(std::pair<int, pthread_t>(fd, pthread_t())).first;
 	pthread_create(&itr->second, NULL, ProcessMessages, (void*)&itr->first);
 
+	// make the client a player
+	game_bot.AddPlayer(fd);
+
 	// output new connection details
 	getpeername(fd, (struct sockaddr *)&ca, &len);
 	getnameinfo((struct sockaddr *)&ca, sizeof(ca), domain, sizeof(domain), 0, 0, NI_NAMEREQD);
@@ -244,6 +247,9 @@ void RemoveClient(const int fd) {
 	// remove connection from our records
 	shutdown(fd, SHUT_RDWR);
 	active_descriptors.erase(fd);
+
+	// remove client from list of players
+	game_bot.RemovePlayer(fd);
 }
 
 void HandleExit() {
