@@ -251,7 +251,9 @@ void HandleExit() {
 }
 
 void SendScore(const int &fd) {
-	SendMessage(fd, "0 " + game_bot.GetScore(fd));
+	if (game_running) {
+		SendMessage(fd, "0 " + game_bot.GetScore(fd));
+	}
 }
 
 void ReceiveMessage(const int& fd, const std::string& msg) {

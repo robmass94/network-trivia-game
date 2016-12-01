@@ -23,7 +23,7 @@ public:
 	std::string GetAnswer         (const std::string& question) const;
 	std::string GetHint           (const std::string& question) const;
 	void        IncreaseScore     (const int& sd);
-	std::string GetScore	      	(const int& sd);
+	std::string GetScore	      	(const int& sd) const;
 private:
 	std::map<int, int>                 player_scores_;
 	std::map<std::string, std::string> questions_;

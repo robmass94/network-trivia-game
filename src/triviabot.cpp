@@ -65,6 +65,6 @@ void TriviaBot::IncreaseScore(const int& sd) {
 	player_scores_[sd]++;
 }
 
-std::string TriviaBot::GetScore(const int& sd) {
-	return "Score: " + std::to_string(player_scores_[sd]);
+std::string TriviaBot::GetScore(const int& sd) const {
+	return "Score: " + std::to_string(player_scores_.at(sd));
 }
