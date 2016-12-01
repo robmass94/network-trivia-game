@@ -206,7 +206,7 @@ void* ProcessMessages(void* fd) {
 			*(int *)fd,
 			message.c_str()
 		);
-		BroadcastMessage(*(int *)fd, alias + " " + message);
+		BroadcastMessage(*(int *)fd, message);
 
 		// do any additional work with the message
 		ReceiveMessage(*(int *)fd, message);
@@ -309,7 +309,7 @@ void ReceiveMessage(const int& fd, const std::string& msg) {
 
 void BroadcastMessage(const int& fd, const std::string& msg) {
 	for(auto itr = active_descriptors.begin(); itr != active_descriptors.end(); ++itr) {
-		if   (fd != 0) SendMessage(itr->first, "1 " + msg);
+		if   (fd != 0) SendMessage(itr->first, "1 " + aliases[fd] + " " + msg);
 		else           SendMessage(itr->first, "0 " + msg);
 	}
 }
