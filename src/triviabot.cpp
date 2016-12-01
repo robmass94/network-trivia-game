@@ -60,16 +60,11 @@ std::string TriviaBot::GetHint(const std::string& question) const {
 
 	return hint;
 }
+
 void TriviaBot::IncreaseScore(const int& sd) {
-	auto itr = player_scores_.find(sd);
-	++itr->second;
+	player_scores_[sd]++;
 }
 
-std::string TriviaBot::SendScore(const int& sd)
-{
-	std::ostringstream oss;
-	auto itr= player_scores_.find(sd);
-	oss << "Player Score : " << itr->second << "\n";
-	return oss.str();
-
+std::string TriviaBot::GetScore(const int& sd) {
+	return "Score: " + std::to_string(player_scores_[sd]);
 }

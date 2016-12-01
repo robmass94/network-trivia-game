@@ -128,11 +128,16 @@ void HandleHelp() {
 	wprintw(chatWin, "!start");
 	wattroff(chatWin, COLOR_PAIR(2));
 	wprintw(chatWin, " : instruct the server to start the trivia game if not already started\n");
-
+	
 	wattron(chatWin, COLOR_PAIR(2));
 	wprintw(chatWin, "!hint");
 	wattroff(chatWin, COLOR_PAIR(2));
 	wprintw(chatWin, " : instruct the server to broadcast a hint for the current trivia question\n");
+
+	wattron(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, "!score");
+	wattroff(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, " : retrieve current score\n");
 
 	wattron(chatWin, COLOR_PAIR(2));
 	wprintw(chatWin, "!stop");

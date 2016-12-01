@@ -250,11 +250,8 @@ void HandleExit() {
 	shutdown(server_descriptor, SHUT_RDWR);
 }
 
-void SendScore(const int &fd)
-{
-	std::string msg = game_bot.SendScore(fd);
-	BroadcastMessage(fd, msg);
-	
+void SendScore(const int &fd) {
+	SendMessage(fd, "0 " + game_bot.GetScore(fd));
 }
 
 void ReceiveMessage(const int& fd, const std::string& msg) {
