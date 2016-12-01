@@ -72,7 +72,7 @@ bool ConnectToServer(const int& sd, const char* server, const int& port) {
 	sa.sin_port = htons(port);
 	sa.sin_addr.s_addr = ((struct sockaddr_in *)(info->ai_addr))->sin_addr.s_addr;
 	if((result = connect(sd, (struct sockaddr *)&sa, sizeof(sa))) != 0) {
-		printf("connect: %s\n", strerror(errno));
+		//printf("connect: %s\n", strerror(errno));
 		return false;
 	}
 
