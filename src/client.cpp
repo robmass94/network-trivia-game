@@ -20,6 +20,7 @@ int   HandleUserInput (std::string& input);
 // helper stuffs
 void ProcessUserCommand   (const std::string&              input);
 void HandleConnect        (const std::vector<std::string>& argv);
+void HandleAlias			  (const std::vector<std::string>& argv);
 void HandleHelp           ();
 void HandleDisconnect     ();
 void HandleUnknownCommand ();
@@ -60,6 +61,7 @@ void ProcessUserCommand(const std::string& input) {
 	std::string command = tokenized_cmd[0];
 
 	if      (command == "/connect")    HandleConnect(tokenized_cmd);
+	else if (command == "/alias")		  HandleAlias(tokenized_cmd);
 	else if (command == "/help")       HandleHelp();
 	else if (command == "/disconnect") HandleDisconnect();
 	else                               HandleUnknownCommand();
@@ -108,11 +110,38 @@ void HandleConnect(const std::vector<std::string>& argv) {
 	}
 }
 
+void HandleAlias(const std::vector<std::string>& argv)
+{
+	// ensure proper input
+	if (argv.size() != 2) {
+		wattron(chatWin, COLOR_PAIR(4));
+		wprintw(chatWin, "ERROR: /alias [new alias]\n");
+		wattroff(chatWin, COLOR_PAIR(4));
+		wrefresh(chatWin);
+		return;
+	}
+
+	if (!isConnected) {
+		wattron(chatWin, COLOR_PAIR(4));
+		wprintw(chatWin, "ERROR: Please first connect to server\n");
+		wattroff(chatWin, COLOR_PAIR(4));
+		wrefresh(chatWin);
+		return;
+	}	
+	
+	SendMessage(server_descriptor, argv[0] + " " + argv[1]);
+}
+
 void HandleHelp() {
 	wattron(chatWin, COLOR_PAIR(2));
 	wprintw(chatWin, "/connect [server hostname] [server port]");
 	wattroff(chatWin, COLOR_PAIR(2));
 	wprintw(chatWin, " : connect to server with given hostname on given port\n");
+	
+	wattron(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, "/alias [new alias]");
+	wattroff(chatWin, COLOR_PAIR(2));
+	wprintw(chatWin, " : change alias\n");
 
 	wattron(chatWin, COLOR_PAIR(2));
 	wprintw(chatWin, "/disconnect");
@@ -236,7 +265,7 @@ void PrintServerMessage(const std::string& msg) {
 void PrintUserMessage(const std::string& msg) {
 	auto tokenized_msg = stringutils::TokenizeString(msg);
 	
-	// print username
+	// print alias
 	wattron(chatWin, COLOR_PAIR(7));
 	wprintw(chatWin, "<%s>: ", tokenized_msg[0].c_str());
 	wattroff(chatWin, COLOR_PAIR(7));

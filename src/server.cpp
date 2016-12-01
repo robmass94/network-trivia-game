@@ -13,6 +13,7 @@
 int                      server_descriptor;
 location                 self;
 std::map<int, pthread_t> active_descriptors;
+std::map<int, std::string> aliases;
 pthread_t                game_thread;
 TriviaBot                game_bot;
 std::string              current_question;
@@ -27,8 +28,8 @@ void HandleExit ();
 void ReceiveMessage(const int& fd, const std::string& msg);
 
 // server maintenance
-void AddClient    (const int fd);
-void RemoveClient (const int fd);
+void AddClient    (const int& fd);
+void RemoveClient (const int& fd);
 
 // thread functions
 void* ProcessStdin       (void *);
@@ -38,7 +39,8 @@ void* ProcessGame        (void *);
 
 // other functions
 void BroadcastMessage(const int& fd, const std::string& msg);
-void SendScore(const int &);
+void SendScore(const int& fd);
+void ChangeAlias(const int& fd, const std::string& new_alias);
 void ServerInterruptHandler(int) {
 	HandleExit();
 	exit(EXIT_SUCCESS);
@@ -194,17 +196,17 @@ void* ProcessMessages(void* fd) {
 		// collect some information about the message for logging
 		time_t current_time  = time(NULL);
 		struct tm* timeinfo  = localtime(&current_time);
-		std::string username = "TODO";
+		std::string alias = aliases[*(int *)fd];
 
 		// display and broadcast the message
 		printf(
 			"\033[0;35m[%02d:%02d:%02d] <%s> (%d): %s\033[0m\n",
 			timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec,
-			username.c_str(),
+			alias.c_str(),
 			*(int *)fd,
 			message.c_str()
 		);
-		BroadcastMessage(*(int *)fd, message);
+		BroadcastMessage(*(int *)fd, alias + " " + message);
 
 		// do any additional work with the message
 		ReceiveMessage(*(int *)fd, message);
@@ -216,7 +218,7 @@ void* ProcessMessages(void* fd) {
 	return NULL;
 }
 
-void AddClient(const int fd) {
+void AddClient(const int& fd) {
 	struct sockaddr_in ca;
 	char               domain[NI_MAXHOST];
 	socklen_t          len = sizeof(ca);
@@ -228,13 +230,16 @@ void AddClient(const int fd) {
 	// make the client a player
 	game_bot.AddPlayer(fd);
 
+	// create temporary alias
+	aliases[fd] = "player" + std::to_string(fd);
+
 	// output new connection details
 	getpeername(fd, (struct sockaddr *)&ca, &len);
 	getnameinfo((struct sockaddr *)&ca, sizeof(ca), domain, sizeof(domain), 0, 0, NI_NAMEREQD);
 	printf("\033[0;31madmin: connect from '%s' at '%d'.\033[0m\n", domain, ntohs(ca.sin_port));
 }
 
-void RemoveClient(const int fd) {
+void RemoveClient(const int& fd) {
 	struct sockaddr_in ca;
 	char               domain[NI_MAXHOST];
 	socklen_t          len = sizeof(ca);
@@ -256,9 +261,25 @@ void HandleExit() {
 	shutdown(server_descriptor, SHUT_RDWR);
 }
 
-void SendScore(const int &fd) {
+void SendScore(const int& fd) {
 	if (game_running) {
 		SendMessage(fd, "0 " + game_bot.GetScore(fd));
+	}
+}
+
+void ChangeAlias(const int& fd, const std::string& new_alias) {
+	bool in_use = false;
+	for (auto itr = aliases.begin(); itr != aliases.end(); ++itr) {
+		if (itr->second == new_alias) {
+			in_use = true;
+		}
+	}
+
+	if (!in_use) {
+		BroadcastMessage(0, "Player " + aliases[fd] + " is now " + new_alias);
+		aliases[fd] = new_alias;
+	} else {
+		SendMessage(fd, "0 " + new_alias + " is already in use");
 	}
 }
 
@@ -271,6 +292,7 @@ void ReceiveMessage(const int& fd, const std::string& msg) {
 	else if (command == "!hint")  BroadcastHint();
 	else if (command == "!stop")  StopGame();
 	else if (command == "!score") SendScore(fd);
+	else if (command == "/alias") ChangeAlias(fd, tokenized_msg[1]);
 	// otherwise process further
 	else {
 		if(game_running) {
@@ -279,16 +301,15 @@ void ReceiveMessage(const int& fd, const std::string& msg) {
 			if (lower_msg == answer) {
 				pthread_cond_signal(&answered_cond);
 				game_bot.IncreaseScore(fd);
-				BroadcastMessage(0, "CORRECT - " + std::to_string(fd));
+				BroadcastMessage(0, "CORRECT - " + aliases[fd]);
 			}
 		}
 	}
 }
 
 void BroadcastMessage(const int& fd, const std::string& msg) {
-	std::string username = "TODO";
 	for(auto itr = active_descriptors.begin(); itr != active_descriptors.end(); ++itr) {
-		if   (fd != 0) SendMessage(itr->first, "1 " + username + " " + msg);
+		if   (fd != 0) SendMessage(itr->first, "1 " + msg);
 		else           SendMessage(itr->first, "0 " + msg);
 	}
 }
