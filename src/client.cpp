@@ -11,6 +11,8 @@
 int       server_descriptor;
 WINDOW    *mainWin, *inputWin, *chatWin, *chatWinBox, *inputWinBox, *infoLine, *infoLineBottom;
 pthread_t message_thread;
+std::vector<std::string> cmd_history;
+int cmd_history_index;
 bool isConnected;
 
 // thread functions
@@ -48,6 +50,10 @@ int main(int argc, char** argv) {
 		num_read = HandleUserInput(input);
 		
 		if(num_read > 0) {
+			// add input to history and reset index
+			cmd_history.push_back(input);
+			cmd_history_index = -1;
+			// evaluate input
 			if(input[0] == '/') ProcessUserCommand(input);
 			else                SendMessage(server_descriptor, input.c_str());
 		}
@@ -195,7 +201,7 @@ void HandleUnknownCommand() {
 	wattron(chatWin, COLOR_PAIR(4));
 	wprintw(chatWin, "ERROR: unknown command.\n");
 	wattroff(chatWin, COLOR_PAIR(4));
-	wrefresh(chatWin);	
+	wrefresh(chatWin);
 }
 
 void* ProcessMessages(void* fd) {
@@ -233,8 +239,8 @@ int HandleUserInput(std::string& input) {
 	int ch;
 	wmove(inputWin, 0, 0);
 	wrefresh(inputWin);
-	
-	// read 1 char at a time till nelinw
+		
+	// read 1 char at a time until newline
 	while((ch = getch()) != '\n') {
 		if(ch == 8 || ch == 127 || ch == KEY_LEFT) {
 			if(i > 0) {
@@ -243,6 +249,26 @@ int HandleUserInput(std::string& input) {
 				wrefresh(inputWin);
 				--i;
 			}
+		} else if (ch == KEY_UP) {
+			if (cmd_history.empty()) {
+				break;
+			}
+			if (cmd_history_index <= 0) {
+				cmd_history_index = cmd_history.size() - 1;
+			} else {
+				--cmd_history_index;
+			}
+			werase(inputWin);
+			wprintw(inputWin, cmd_history.at(cmd_history_index).c_str());
+			wrefresh(inputWin);
+		} else if (ch == KEY_DOWN) {
+			if (cmd_history.empty() || cmd_history_index == -1) {
+				break;
+			}
+			cmd_history_index = (cmd_history_index + 1) % cmd_history.size();
+			werase(inputWin);
+			wprintw(inputWin, cmd_history.at(cmd_history_index).c_str());
+			wrefresh(inputWin);
 		} else if(ch != ERR) {
 			++i;
 			input.append((char *)&ch);
