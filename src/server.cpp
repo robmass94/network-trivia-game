@@ -171,7 +171,6 @@ void* ProcessConnections(void *) {
 	// accept connections while the server lives
 	while((fd = accept(server_descriptor, NULL, NULL)) != -1) {
 		AddClient(fd);
-		// broadcast that someone connected (maybe here, maybe only if signed in)
 	}
 
 	printf("\033[0;31madmin: no longer accepting new connections.\033[0m\n");
@@ -237,6 +236,9 @@ void AddClient(const int& fd) {
 	getpeername(fd, (struct sockaddr *)&ca, &len);
 	getnameinfo((struct sockaddr *)&ca, sizeof(ca), domain, sizeof(domain), 0, 0, NI_NAMEREQD);
 	printf("\033[0;31madmin: connect from '%s' at '%d'.\033[0m\n", domain, ntohs(ca.sin_port));
+
+	// broadcast addition
+	BroadcastMessage(0, "Player " + aliases[fd] + " has joined");
 }
 
 void RemoveClient(const int& fd) {
@@ -251,10 +253,15 @@ void RemoveClient(const int& fd) {
 
 	// remove connection from our records
 	shutdown(fd, SHUT_RDWR);
+	close(fd);
 	active_descriptors.erase(fd);
+
+	// broadcast removal to remaining players
+	BroadcastMessage(0, "Player " + aliases[fd] + " has left");
 
 	// remove client from list of players
 	game_bot.RemovePlayer(fd);
+	aliases.erase(fd);
 }
 
 void HandleExit() {

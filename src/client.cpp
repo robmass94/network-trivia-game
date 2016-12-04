@@ -115,10 +115,6 @@ void HandleConnect(const std::vector<std::string>& argv) {
 		// start monitoring messages on this socket
 		pthread_create(&message_thread, NULL, ProcessMessages, &server_descriptor);
 
-		// clear chat window
-		werase(chatWin);
-		wrefresh(chatWin);
-
 		// print connection details
 		werase(infoLineBottom);
 		wattron(infoLineBottom, COLOR_PAIR(3));
@@ -203,11 +199,6 @@ void HandleDisconnect() {
 		werase(infoLineBottom);
 		wrefresh(infoLineBottom);
 		isConnected = false;
-	} else {
-		wattron(chatWin, COLOR_PAIR(4));
-		wprintw(chatWin, "ERROR: Not connected to a server\n");
-		wattroff(chatWin, COLOR_PAIR(4));
-		wrefresh(chatWin);
 	}
 }
 
