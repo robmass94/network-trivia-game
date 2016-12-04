@@ -54,8 +54,18 @@ int main(int argc, char** argv) {
 			cmd_history.push_back(input);
 			cmd_history_index = -1;
 			// evaluate input
-			if(input[0] == '/') ProcessUserCommand(input);
-			else                SendMessage(server_descriptor, input.c_str());
+			if(input[0] == '/') {
+				ProcessUserCommand(input);
+			} else {
+				if (isConnected) {
+					SendMessage(server_descriptor, input.c_str());
+				} else {
+					wattron(chatWin, COLOR_PAIR(4));
+					wprintw(chatWin, "ERROR: Please first connect to a server\n");
+					wattroff(chatWin, COLOR_PAIR(4));
+					wrefresh(chatWin);
+				}
+			}
 		}
 	}
 	
@@ -105,6 +115,10 @@ void HandleConnect(const std::vector<std::string>& argv) {
 		// start monitoring messages on this socket
 		pthread_create(&message_thread, NULL, ProcessMessages, &server_descriptor);
 
+		// clear chat window
+		werase(chatWin);
+		wrefresh(chatWin);
+
 		// print connection details
 		werase(infoLineBottom);
 		wattron(infoLineBottom, COLOR_PAIR(3));
@@ -121,7 +135,7 @@ void HandleAlias(const std::vector<std::string>& argv)
 	// ensure proper input
 	if (argv.size() != 2) {
 		wattron(chatWin, COLOR_PAIR(4));
-		wprintw(chatWin, "ERROR: /alias [new alias]\n");
+		wprintw(chatWin, "ERROR: syntax: /alias [new alias]\n");
 		wattroff(chatWin, COLOR_PAIR(4));
 		wrefresh(chatWin);
 		return;
@@ -129,7 +143,7 @@ void HandleAlias(const std::vector<std::string>& argv)
 
 	if (!isConnected) {
 		wattron(chatWin, COLOR_PAIR(4));
-		wprintw(chatWin, "ERROR: Please first connect to server\n");
+		wprintw(chatWin, "ERROR: Please first connect to a server\n");
 		wattroff(chatWin, COLOR_PAIR(4));
 		wrefresh(chatWin);
 		return;
@@ -187,19 +201,19 @@ void HandleDisconnect() {
 		shutdown(server_descriptor, SHUT_RDWR);
 		close(server_descriptor);
 		werase(infoLineBottom);
+		wrefresh(infoLineBottom);
 		isConnected = false;
 	} else {
-		werase(infoLineBottom);
-		wattron(infoLineBottom, COLOR_PAIR(3));
-		wprintw(infoLineBottom, "Not connected to a server."); // ideally we just clear the line
-		wattroff(infoLineBottom, COLOR_PAIR(3));
-		wrefresh(infoLineBottom);
+		wattron(chatWin, COLOR_PAIR(4));
+		wprintw(chatWin, "ERROR: Not connected to a server\n");
+		wattroff(chatWin, COLOR_PAIR(4));
+		wrefresh(chatWin);
 	}
 }
 
 void HandleUnknownCommand() {
 	wattron(chatWin, COLOR_PAIR(4));
-	wprintw(chatWin, "ERROR: unknown command.\n");
+	wprintw(chatWin, "ERROR: Unknown command\n");
 	wattroff(chatWin, COLOR_PAIR(4));
 	wrefresh(chatWin);
 }
@@ -258,16 +272,20 @@ int HandleUserInput(std::string& input) {
 			} else {
 				--cmd_history_index;
 			}
+			input = cmd_history.at(cmd_history_index);
+			i = input.length();
 			werase(inputWin);
-			wprintw(inputWin, cmd_history.at(cmd_history_index).c_str());
+			wprintw(inputWin, input.c_str());
 			wrefresh(inputWin);
 		} else if (ch == KEY_DOWN) {
 			if (cmd_history.empty() || cmd_history_index == -1) {
 				break;
 			}
 			cmd_history_index = (cmd_history_index + 1) % cmd_history.size();
+			input = cmd_history.at(cmd_history_index);
+			i = input.length();
 			werase(inputWin);
-			wprintw(inputWin, cmd_history.at(cmd_history_index).c_str());
+			wprintw(inputWin, input.c_str());
 			wrefresh(inputWin);
 		} else if(ch != ERR) {
 			++i;
