@@ -276,7 +276,7 @@ int HandleUserInput(std::string& input) {
 			wrefresh(inputWin);
 		}
 	}
-	wclear(inputWin);
+	werase(inputWin);
 	wrefresh(inputWin);
 	return i;
 }
