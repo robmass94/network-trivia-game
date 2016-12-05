@@ -32,9 +32,15 @@ void PrintUserMessage     (const std::string& msg);
 int main(int argc, char** argv) {
 	std::string input;
 	int num_read;
+	struct sigaction resize_handler;
 
 	// start the gui!
 	InitializeGUI();
+
+	resize_handler.sa_handler = ResizeHandler;
+	sigemptyset(&resize_handler.sa_mask);
+	resize_handler.sa_flags = 0;
+	sigaction(SIGWINCH, &resize_handler, NULL);
 
 	// ignore SIGPIPE
 	signal(SIGPIPE, SIG_IGN);
