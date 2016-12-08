@@ -5,7 +5,6 @@
 #include <sys/time.h>
 #include "shared.h"
 #include "stringutils.h"
-#include "user.h"
 #include "location.h"
 #include "triviabot.h"
 
